@@ -1,0 +1,490 @@
+=====================================================================
+  RIDERS, RIVALS AND RUSH HOURS  -  A PLAIN-LANGUAGE GUIDE
+=====================================================================
+
+This file explains, in simple words, what every part of the project is,
+what every page shows, and what every technical term means. Read it top
+to bottom once and you will be able to explain the whole project.
+
+CONTENTS
+  1.  The project in one paragraph
+  2.  The story: the market we model
+  3.  Game theory words you need (glossary)
+  4.  The sliders / parameters
+  5.  The 9 models, one by one
+  6.  The 11 pages of the app, and how to read each chart
+  7.  The main findings (what we learned)
+  8.  How the computer finds the answers (simply)
+  9.  Two changes we made to the original brief, and why
+ 10.  Which file does what
+ 11.  How to run it
+ 12.  Likely viva questions with short answers
+
+
+---------------------------------------------------------------------
+1. THE PROJECT IN ONE PARAGRAPH
+---------------------------------------------------------------------
+Two food-delivery apps (Platform A and Platform B, think Swiggy and
+Zomato) compete in the same city during the dinner rush. They share the
+same customers and the same pool of delivery riders (riders can work for
+either app). If A pays riders more, riders leave B, so B's deliveries get
+slower. Each app's result therefore depends on what the OTHER app does.
+That is exactly what game theory studies. We build one model of this
+city, then let the apps compete in different ways (choose riders, choose
+pay, choose fees, move first, play every day, have secret information)
+and compare the results.
+
+
+---------------------------------------------------------------------
+2. THE STORY: THE MARKET WE MODEL
+---------------------------------------------------------------------
+Everything happens in ONE peak hour in ONE city zone. Money is in rupees.
+
+  CUSTOMERS
+    - Up to Λ (lambda) orders per hour could be placed:
+        Low = 600, Medium = 1000, Peak = 1500, Extreme = 2000.
+    - Each customer chooses: order from A, order from B, or don't order.
+    - They prefer a LOW delivery fee and a SHORT delivery time.
+
+  RIDERS
+    - There are R = 500 riders in the city.
+    - Each rider chooses: work for A, work for B, or stay offline.
+    - They prefer the app that pays MORE per order. If neither pays
+      more than about ₹25 (their "reservation pay" w0), many stay offline.
+
+  DELIVERY TIME (DELAY)
+    - Each rider can do about k = 2.2 deliveries per hour.
+    - "Utilisation" ρ (rho) = orders ÷ capacity. ρ = 0.5 means the fleet
+      is half busy; ρ close to 1 means everyone is busy.
+    - Delay = 28 minutes + an extra amount that shoots up as ρ gets
+      close to 1. Formula: D = 28 + 6·ρ/(1−ρ).
+      ρ = 0.5 -> 34 min,  ρ = 0.75 -> 46 min,  ρ = 0.9 -> 82 min.
+
+  THE LOOP
+    - More orders -> busier riders -> longer delay -> fewer customers
+      order -> less busy ... The model finds the point where this loop
+      settles down (the "fixed point").
+
+  PROFIT OF A PLATFORM (per hour)
+    profit = orders delivered × (delivery fee + restaurant commission − rider pay)
+           = orders × (p + 45 − w)
+    with p = ₹35 fee (unless the model lets apps choose it), m = ₹45
+    commission from the restaurant, and w = rider pay per order.
+
+  WELFARE (is the outcome good for society?)
+    - Consumer surplus  = how happy customers are (good choices, short waits).
+    - Platform profit   = what the two apps earn.
+    - Rider surplus     = how much better off riders are than offline.
+    - Total welfare     = all three added up.
+    - Efficiency        = our welfare ÷ the best welfare an ideal planner
+                          could reach. 100% = perfect, 80% = 20% wasted.
+
+
+---------------------------------------------------------------------
+3. GAME THEORY WORDS YOU NEED (GLOSSARY)
+---------------------------------------------------------------------
+Player          A decision-maker. Here: Platform A and Platform B.
+Strategy        What a player chooses. Here: number of riders (N),
+                rider pay (w) or delivery fee (p).
+Payoff          What a player gets. Here: profit in ₹ per hour.
+Best response   Your best choice GIVEN what the rival does.
+                "If B pays ₹40, my best pay is ₹47."
+Best-response   A line showing your best choice for every possible rival
+curve           choice. Two curves, one per platform.
+Nash            A pair of choices where each is a best response to the
+equilibrium     other, so nobody wants to change alone. On a chart, it is
+(NE)            where the two best-response curves CROSS.
+Unilateral      Changing your own choice while the rival stays put.
+deviation       The app checks that no deviation increases profit; that
+                is how we know a result really is a Nash equilibrium.
+Cournot         Competing by choosing QUANTITIES (here: how many riders).
+Bertrand        Competing by choosing PRICES (here: rider pay or fees).
+Bertrand        If two firms sell identical things and compete on price,
+paradox         price falls until profit is zero, even with only two firms.
+Stackelberg     One player moves first (leader), the other sees that and
+                responds (follower).
+Backward        Solving a sequential game from the END: first work out how
+induction       the follower reacts to anything, then pick the leader's
+                best move knowing that.
+Subgame-perfect The equilibrium found by backward induction (no player makes
+equilibrium     a non-credible threat at any stage).
+(SPE)
+First-mover     Extra profit the leader gets compared with deciding at the
+advantage (FMA) same time as the rival.
+Strategic       My best choice goes DOWN when the rival's goes up (hiring
+substitutes     riders: if B hires many, A hires fewer).
+Strategic       My best choice goes UP when the rival's goes up (rider pay:
+complements     if B pays more, A must pay more).
+Payoff matrix   A table: rows = A's options, columns = B's options, each
+                cell = (A's profit, B's profit).
+Dominated       An option that is ALWAYS worse than another option, no
+strategy        matter what the rival does. A sensible player never uses it.
+IESDS           "Iterated elimination of strictly dominated strategies":
+                cross out dominated options, then check again, repeat.
+Mixed strategy  Choosing randomly with fixed probabilities (e.g. 50% heads,
+                50% tails in Matching Pennies).
+Maxmin          The "safest" choice: the one whose WORST possible result is
+                as good as possible.
+Prisoner's      Both players have a reason to cheat, so both cheat, and both
+Dilemma (PD)    end up worse off than if both had cooperated.
+                Rule: T > R > P > S
+                  T = Temptation (I cheat, you don't)
+                  R = Reward     (we both cooperate)
+                  P = Punishment (we both cheat)
+                  S = Sucker     (I cooperate, you cheat)
+Collusion       The apps secretly agree to keep rider pay low (cooperate).
+Repeated game   The same game played every day.
+Discount        How much tomorrow matters compared with today (0 to 1).
+factor δ        δ = 0.9: tomorrow's profit is worth 90% of today's.
+Critical δ*     The minimum patience needed for cooperation to survive.
+                δ* = (T − R) / (T − P). If δ ≥ δ*, nobody cheats.
+Grim trigger    "I cooperate until you cheat once; then I punish forever."
+Tit-for-Tat     "I start nice, then copy whatever you did yesterday."
+(TFT)
+Generous TFT    Like TFT, but sometimes forgives a defection.
+(GTFT)
+Noise           A chance that a fair move is SEEN as cheating by mistake.
+Bayesian game   A game where players have private information.
+Type            The private information. Here: is MY demand High or Low today.
+Prior           The probability a player's type is High (e.g. 50%).
+Bayesian Nash   Each type's choice is the best response to the rival's
+equilibrium     expected (average) behaviour.
+Social planner  An imaginary neutral controller that maximises total welfare.
+Price of        Best welfare ÷ our welfare. 1.10 = competition wastes ~10%.
+anarchy (PoA)
+Logit choice    A standard way to model choices: the better an option is,
+                the more people pick it, but not 100% (people differ).
+Fixed point     A value that stays the same when you plug it back in. Our
+                demand and delay must agree with each other at the fixed point.
+Monte Carlo     Running a random simulation many times (20 seeds) and averaging.
+
+
+---------------------------------------------------------------------
+4. THE SLIDERS / PARAMETERS
+---------------------------------------------------------------------
+Basic view shows 4 sliders. Technical view shows all of them.
+
+  Riders available (R)             500     size of the shared rider pool
+  How strongly riders chase pay (β) 0.15   higher = riders switch apps for
+                                           small pay differences
+  How much customers hate waiting (c) 0.08 higher = long delays lose more
+                                           customers
+  Delivery fee (p)                 ₹35     fee customers pay per order
+  ------- technical only -------
+  Reservation pay (w0)             ₹25     what riders get elsewhere
+  Orders per rider-hour (k)        2.2     rider speed
+  Base delay (d0)                  28 min  delay with no congestion
+  Congestion scale (s)             6 min   how fast delay rises when busy
+  Attractiveness (a)               4.0     how much customers like the apps
+  Fee sensitivity (b)              0.05    how much customers dislike fees
+  Commission (m)                   ₹45     paid by the restaurant per order
+  Max utilisation (ρmax)           0.97    beyond this, orders are cancelled
+  Social cost of delay             ₹3/min  used only in the welfare score
+  Fixed costs (F_A, F_B)           ₹0      do not change decisions
+  "Platform A is the bigger brand" makes customers like A a bit more.
+
+
+---------------------------------------------------------------------
+5. THE 9 MODELS, ONE BY ONE
+---------------------------------------------------------------------
+All models use the SAME city, riders and customers. Only "what the apps
+choose" and "who moves when" changes.
+
+(1) COURNOT (capacity)
+    Apps choose HOW MANY RIDERS to hire, at the same time. More riders
+    cost more because you must pay more per order to attract them.
+    Result: about 184-224 riders each, pay ₹27-35 per order.
+
+(2) BERTRAND ON RIDER PAY (incentives)
+    Apps choose RIDER PAY per order, at the same time. Riders go to the
+    higher payer, so each app is tempted to outbid the other: the
+    "incentive war". Result: pay climbs to ₹37-63 per order.
+    Toggle "riders see both apps as identical" -> BERTRAND PARADOX: pay
+    rises to ~₹79-80 (all the money they earn per order) and profit
+    falls to nearly zero.
+
+(3) BERTRAND ON FEES
+    The number of riders is fixed. Apps choose the DELIVERY FEE. A lower
+    fee brings orders but also makes the fleet busier and slower.
+
+(4) STACKELBERG - capacity
+    A hires first, B sees it and hires. A grabs more riders (leader
+    advantage). B hires fewer and does worse.
+
+(5) STACKELBERG - rider pay
+    A sets pay first, B responds. A sets a moderate pay to calm the war.
+    B then pays a bit more and actually gains MORE than A
+    (second-mover advantage).
+
+(6) TWO-STAGE: capacity, then fees
+    Step 1: both hire riders. Step 2: knowing fleet sizes, both set fees.
+    Solved backwards. Result: they hire almost exactly as many riders as
+    in Cournot (within 0.7%). This is the famous Kreps-Scheinkman result.
+
+(7) COLLUSION (benchmark)
+    The apps act as one and keep rider pay low to maximise joint profit.
+    Highest profit, but bad for riders (low pay) and customers (slower
+    deliveries), and not stable on its own (each app is tempted to cheat).
+
+(8) SOCIAL PLANNER (benchmark)
+    A neutral planner picks pay and fees for both apps to maximise total
+    welfare. Used as the "100%" for the efficiency score. At peaks it
+    raises fees to reduce congestion ("congestion pricing").
+
+(9a) STRATEGIC-FORM GAME (Low / Medium / High pay table)
+    Low = the collusion pay, High = the best way to cheat on it.
+    Result: High is always the better choice whatever the rival does, so
+    both pick High, yet both would earn more at Low -> Prisoner's Dilemma.
+
+(9b) REPEATED GAME
+    The table above is played every day. With grim trigger, the truce
+    survives if δ ≥ δ* (0.51 at Low demand, 0.71 at Extreme demand).
+
+(9c) BAYESIAN (incomplete information)
+    Each app knows if its own demand is High or Low, not the rival's.
+    High-demand apps hire more riders. Not knowing the rival makes both
+    types hire closer to the middle.
+
+
+---------------------------------------------------------------------
+6. THE 11 PAGES OF THE APP
+---------------------------------------------------------------------
+Sidebar switch "Show technical details": OFF = simple view (default),
+ON = solver checks, extra sliders, extra charts and tables.
+Every chart has a PNG download button and a CSV download button.
+
+ 1. OVERVIEW
+    Problem statement, a diagram of the market (customers - apps -
+    riders), why game theory is needed, research questions, and a
+    5-minute tour.
+
+ 2. MODEL PLAYGROUND
+    Pick a model and a demand level, move sliders.
+    - Big line: the equilibrium choice of A and B.
+    - Green badge: the app checked nobody can gain by switching alone.
+    - 4 cards: delivery time, orders delivered, profit, paid to riders.
+    - BEST-RESPONSE CHART: blue line = A's best choice for every B
+      choice; orange = B's best choice for every A choice. Black dot
+      where they cross = Nash equilibrium.
+    - "Where the surplus goes": how the total benefit splits between
+      customers, A, B and riders.
+    - "Who goes where": share of customers and riders choosing A, B or
+      neither.
+
+ 3. MODEL COMPARISON
+    - Grouped bar chart: one colour per model, groups = demand levels.
+      Switch the measure at the top (delivery time, orders, profit,
+      paid to riders, good-for-society).
+    - Heatmap: efficiency of each model at each demand level. Darker
+      blue = closer to the best possible.
+
+ 4. STRATEGIC FORM LAB
+    - Payoff table: (A's profit, B's profit) in thousands of ₹.
+      Underlined = best response. Boxed "NE" = Nash equilibrium.
+    - Press ANIMATE: dominated options get crossed out step by step.
+    - Nash equilibria: bars show the probability of each choice.
+    - Prisoner's Dilemma card: shows T, R, P, S.
+    - "Textbook games" tab: Prisoner's Dilemma, Matching Pennies,
+      Battle of the Sexes, Stag Hunt, Chicken. You can edit payoffs.
+
+ 5. LEADER-FOLLOWER
+    - Game tree: A's possible moves -> B's reply -> payoffs.
+    - Step-by-step backward induction (click the steps).
+    - Leader's profit curve: the peak is A's best first move.
+    - First-mover advantage bars for each demand level.
+
+ 6. REPEATED GAME LAB
+    - δ slider with the red δ* marker.
+    - "Cooperate forever vs deviate once" chart: where the lines cross
+      is δ*. Right of it, cooperating pays more.
+    - Tournament: 5 strategies play each other; bars = average profit.
+    - Cumulative profit chart for any pair of strategies.
+    - Noise chart: how cooperation falls when moves are mis-seen.
+
+ 7. INCOMPLETE INFORMATION
+    - Riders hired by each app for High and Low demand.
+    - Bar chart: Bayesian choice vs choice if they could see each other.
+
+ 8. CITY SIMULATION
+    - Animated map: dots = riders (blue A, orange B; filled busy,
+      hollow free), squares = restaurants, rings = waiting orders,
+      × = delivery addresses. Play / pause / speed / time slider.
+    - Live charts: delay, free riders, orders waiting.
+    - Final chart: simulation (solid, with shaded range) vs our simple
+      delay formula (dashed). Their gap tells us how good the formula is.
+
+ 9. SENSITIVITY ANALYSIS
+    Pick one parameter (β, c, k, R, Λ). Each chart shows how a result
+    changes as that parameter moves. Dashed line = default value.
+
+10. METHODOLOGY
+    All formulas, the assumptions, limitations, and a table mapping each
+    feature to the syllabus modules 1-7.
+
+11. INSIGHTS
+    The main conclusions, written automatically from the numbers.
+
+
+---------------------------------------------------------------------
+7. THE MAIN FINDINGS (WHAT WE LEARNED)
+---------------------------------------------------------------------
+ 1. Incentive wars mostly move money from platforms to riders.
+    At Extreme demand, the war costs the apps about ₹28,000/hour more
+    than colluding, but delivery is only 2.8 minutes faster. About 84%
+    of the extra money ends up with riders. Reason: once all 500
+    riders are working, extra pay cannot create new riders; it just
+    pulls riders from one app to the other.
+
+ 2. Moving first helps when choosing RIDER NUMBERS (leader grabs
+    riders), but when choosing RIDER PAY the follower gains even more.
+
+ 3. The low-pay truce is hardest to keep at peak times: the needed
+    patience δ* rises from 0.51 (Low) to 0.71 (Extreme), because the
+    temptation to steal riders is biggest when demand is highest.
+
+ 4. Mistakes break trust: with 5% chance of mis-seeing a fair move,
+    grim trigger cooperates only ~19% of days; generous TFT ~80%.
+
+ 5. Committing to fleet size before setting fees gives almost the same
+    fleet as Cournot (within 0.7%): Kreps-Scheinkman.
+
+ 6. Collusion is (almost) always the WORST for society; competition is
+    closer to the best outcome. At peak, letting fees rise (congestion
+    pricing) helps the most.
+
+ 7. The simple delay formula is checked by the city simulation: it is
+    close at peak (within ~7%) and a bit pessimistic at moderate load
+    (overall error ~17%).
+
+
+---------------------------------------------------------------------
+8. HOW THE COMPUTER FINDS THE ANSWERS (SIMPLY)
+---------------------------------------------------------------------
+ - Fixed point: start with a guess for delay, compute orders, compute
+   the new delay, adjust, repeat until it stops changing (Newton method).
+ - Best response: try many values of the platform's choice (a grid of
+   61 values), pick the best, then zoom in for precision.
+ - Nash equilibrium: A best-responds to B, then B to A, repeat until
+   nothing changes ("best-response iteration").
+ - Check: for each equilibrium, try 401 other choices for each app
+   with the rival fixed. If none earns more, the equilibrium is
+   confirmed (green badge).
+ - Stackelberg / two-stage: for each leader move, solve the follower's
+   reply; then pick the leader's best move (backward induction).
+ - Table games: cross out dominated options; solve small equations to
+   find mixed equilibria.
+ - Repeated game: simulate 60 days for every pair of strategies.
+ - City simulation: every rider and order is simulated minute by
+   minute; repeated with 20 random seeds and averaged.
+
+
+---------------------------------------------------------------------
+9. TWO CHANGES WE MADE TO THE ORIGINAL BRIEF, AND WHY
+---------------------------------------------------------------------
+ (a) Customer "attractiveness" a = 4.0 instead of 1.0.
+     With a = 1.0, a customer's value of ordering was −3 versus 0 for
+     not ordering, so only ~8% of customers ever ordered. Riders were
+     never busy, delays never rose, and there was no incentive war,
+     so nothing interesting could be studied. a = 4.0 changes no
+     formula, only the level, and creates the busy-peak situation the
+     project is about. It is still a slider.
+
+ (b) Delay cost ₹3/min counted once, only for EXTRA delay above 28 min.
+     Customers already "feel" ₹1.6/min of delay when choosing, so we
+     add only the remaining ₹1.4/min. Counting it twice made customer
+     happiness negative even on quiet days.
+
+
+---------------------------------------------------------------------
+10. WHICH FILE DOES WHAT
+---------------------------------------------------------------------
+backend/config/defaults.json     every number (parameters) in one place
+backend/engine/market.py         THE shared city model (riders, delay,
+                                 customers, profit, welfare)
+backend/engine/solvers.py        best response, Nash search, checks
+backend/engine/cournot.py        model 1
+backend/engine/bertrand.py       models 2 and 3 (+ Bertrand paradox)
+backend/engine/stackelberg.py    models 4 and 5
+backend/engine/two_stage.py      model 6
+backend/engine/planner.py        models 7 and 8 (collusion, planner)
+backend/engine/matrix_game.py    payoff table, dominance, mixed NE, PD
+backend/engine/repeated.py       repeated game, δ*, tournament, noise
+backend/engine/bayesian.py       Bayesian (secret demand) game
+backend/engine/registry.py       runs/compares all models, efficiency
+backend/engine/sensitivity.py    "what if" parameter sweeps
+backend/engine/insights.py       writes the findings automatically
+backend/simulation/abm.py        the animated city simulation
+backend/simulation/runner.py     repeats it 20 times, compares to formula
+backend/api/main.py              the web API the frontend talks to
+backend/tests/                   54 automatic tests (all pass)
+frontend/src/pages/              the 11 pages
+frontend/src/components/         charts, payoff table, game tree, sliders
+docs/                            detailed technical documents
+reports/                         scripts that make PNG figures for a report
+
+
+---------------------------------------------------------------------
+11. HOW TO RUN IT (PowerShell, from E:\Riders_Rivals_Rushhours)
+---------------------------------------------------------------------
+  Window 1:   .\start-backend.ps1
+  Window 2:   .\start-frontend.ps1
+  Browser:    http://localhost:5173
+  Tests:      .\run-tests.ps1
+The first 1-2 minutes after starting the backend it pre-computes
+results, so pages may be slow at first.
+
+
+---------------------------------------------------------------------
+12. LIKELY VIVA QUESTIONS WITH SHORT ANSWERS
+---------------------------------------------------------------------
+Q: Why is game theory needed here?
+A: Each app's profit depends on the other app's choice (shared riders and
+   customers), and there is no central controller. That is a strategic
+   game, not a simple optimisation.
+
+Q: How do you know your answer is really a Nash equilibrium?
+A: For every result we try 401 alternative choices for each app with the
+   rival fixed; none earns more. We also test textbook cases (Cournot
+   q* = (a−c)/3b, Stackelberg (a−c)/2b, Matching Pennies 50/50,
+   δ* = 0.5 for the classic Prisoner's Dilemma).
+
+Q: Cournot vs Bertrand: what is the difference here?
+A: Cournot = choose number of riders; Bertrand = choose rider pay. Paying
+   per rider-number leads to calmer pay (₹27-35); competing on pay leads
+   to an incentive war (₹37-63).
+
+Q: What is the Bertrand paradox in your project?
+A: If riders see both apps as identical, each app outbids the other until
+   rider pay equals what it earns per order (₹80), so profit ≈ 0.
+
+Q: Why does the follower win in the pay version of Stackelberg?
+A: Pay levels are strategic complements: when A commits to a moderate pay,
+   B can pay slightly more, take riders, and earn more than A.
+
+Q: Why is the incentive game a Prisoner's Dilemma?
+A: Whatever the rival does, paying High earns more than paying Low (T > R
+   and P > S), so both pay High; but both paying Low (R) beats both
+   paying High (P).
+
+Q: What is δ* and what did you find?
+A: The minimum patience for cooperation to survive under grim trigger,
+   δ* = (T−R)/(T−P). It rises from 0.51 to 0.71 as demand rises, so
+   truces are hardest at peak times.
+
+Q: What does the Bayesian model show?
+A: When an app's demand is private, it hires based on the rival's
+   average behaviour, so High and Low types hire closer to each other
+   than they would with full information.
+
+Q: What is efficiency / price of anarchy?
+A: Efficiency = our total welfare ÷ the planner's best welfare. Price of
+   anarchy is the inverse. They measure how much competition wastes.
+
+Q: Why the simulation?
+A: To check the simple delay formula with a detailed, rider-by-rider
+   model. It matches within ~7% at peak and is ~17% off on average.
+
+Q: Biggest limitation?
+A: One zone, one hour, illustrative (not real Swiggy/Zomato) numbers,
+   and a simple delay formula. The direction of the results matters
+   more than the exact rupee values.

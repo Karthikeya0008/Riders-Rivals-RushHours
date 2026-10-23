@@ -1,0 +1,97 @@
+{
+  "market": {
+    "R": 500,
+    "w0": 25.0,
+    "beta": 0.15,
+    "k": 2.2,
+    "rho_max": 0.97,
+    "d0": 28.0,
+    "s": 6.0,
+    "a_A": 4.0,
+    "a_B": 4.0,
+    "dominant_bonus": 0.2,
+    "b": 0.05,
+    "c": 0.08,
+    "m": 45.0,
+    "p": 35.0,
+    "F_A": 0.0,
+    "F_B": 0.0,
+    "delay_cost": 3.0,
+    "delay_cost_basis": "excess",
+    "beta_homogeneous": 5.0
+  },
+  "scenarios": {
+    "Low": 600,
+    "Medium": 1000,
+    "Peak": 1500,
+    "Extreme": 2000
+  },
+  "bounds": {
+    "w": [
+      0.0,
+      100.0
+    ],
+    "p": [
+      0.0,
+      120.0
+    ],
+    "N_min": 1.0,
+    "N0_min": 1.0
+  },
+  "fee_game": {
+    "fixed_incentive": 25.0
+  },
+  "solver": {
+    "fp_tol": 1e-09,
+    "fp_max_iter": 200,
+    "br_grid": 61,
+    "br_max_iter": 200,
+    "br_tol": 1e-05,
+    "deviation_grid": 401,
+    "deviation_tol_rel": 0.001,
+    "deviation_tol_abs": 1.0,
+    "curve_points": 41
+  },
+  "matrix_game": {
+    "levels": "auto",
+    "labels": [
+      "Low",
+      "Medium",
+      "High"
+    ]
+  },
+  "repeated": {
+    "T": 60,
+    "delta": 0.9,
+    "noise": 0.0,
+    "generosity": 0.3,
+    "replications": 200,
+    "seed": 7
+  },
+  "bayesian": {
+    "prior_high": 0.5,
+    "a_shift": 0.3
+  },
+  "simulation": {
+    "city_km": 20.0,
+    "restaurants": 40,
+    "hotspots": 5,
+    "hotspot_spread_km": 1.2,
+    "window_min": 180,
+    "block_min": 15,
+    "speed_kmh": 20.0,
+    "road_factor": 1.3,
+    "prep_mean_min": 12.0,
+    "prep_shape": 4.0,
+    "handover_min": 2.0,
+    "patience_min": 20.0,
+    "customer_radius_km": 5.0,
+    "idle_reposition": true,
+    "peak_factor": 1.35,
+    "seed": 42,
+    "mc_runs": 20,
+    "frame_every_min": 1,
+    "delay_ewma": 0.05,
+    "model": "bertrand_incentive"
+  }
+}
